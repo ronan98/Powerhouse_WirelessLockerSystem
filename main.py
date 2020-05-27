@@ -6,16 +6,13 @@ Ronan | Heidy | Justin | Faisal | Abdullah
 """
 
 import time
-import RPi.GPIO as GPIO
 import pandas as pd
 import serial
 from csv import writer
 import sys
+import paho.mqtt.publish as publish
 
-GPIO.setmode(GPIO.BCM)
 exit_Program = False
-
-ser = serial.Serial('/dev/rfcomm0', 9600)
 
 # to be called if a locker needs to be opened
 def unlockDoor(lockerNum, status):
@@ -25,8 +22,7 @@ def unlockDoor(lockerNum, status):
         df["locker#"]= df["locker#"].astype(str)
         #print(str(lockerNum) + " is the locker row")
         lockerName = df.loc[lockerNum, 'locker#']
-        lockerName = lockerName + "\n"
-        ser.write(str.encode(lockerName))
+        publish.single("unlockNUM", lockerName, hostname="192.168.1.41")
         #print(lockerName)
         print("\nYour locker has been opened!\n")
     else:
