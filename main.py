@@ -6,75 +6,79 @@ Ronan | Heidy | Justin | Faisal | Abdullah
 """
 
 import time
-import pandas as pd
-import serial
-from csv import writer
 import sys
 import paho.mqtt.publish as publish
+import sqlite3
 
-exit_Program = False
 
-# to be called if a locker needs to be opened
-def unlockDoor(lockerNum, status):
-    if status == True:
-        #print("unlocking")
-        df = pd.read_csv("users2.csv")
-        df["locker#"]= df["locker#"].astype(str)
-        #print(str(lockerNum) + " is the locker row")
-        lockerName = df.loc[lockerNum, 'locker#']
-        publish.single("unlockNUM", lockerName, hostname="192.168.1.41")
-        #print(lockerName)
-        print("\nYour locker has been opened!\n")
-    else:
-        print("\nAccess denied. ID or selected locker incorrect!\n")
+def unlockDoor():
+    locker = (input("Which locker would you like to open?"))
+    print(locker)
 
-def authentication():
-    df = pd.read_csv("users2.csv")
-
-    df["coyoteID"]= df["coyoteID"].astype(str)
-    df["locker#"]= df["locker#"].astype(str)
-
-    value = input("Swipe your coyote ID.\n")
-    locker = input("What locker?\n")
-    #print(value)
-    
-    for i in range(len(df)):
-        print(i)
-        print(str(df.loc[i, 'coyoteID']))
-        if value == df.loc[i, 'coyoteID']:
-            #print('authorized user')
-            #print(locker)
-            #print(df.loc[i, 'locker#'])
-            if locker == df.loc[i, 'locker#']:
-                #print('authorized locker')
-                lockerNum = i
-                status = True
-                break
-            else:
-                #print('not authorized locker')
-                lockerNum = 0
+    if(locker == '1'):
+        if(locker1_access == True):
+            publish.single("unlockNUM", locker, hostname="192.168.1.41")
         else:
-            lockerNum = 0
-            status = False
-            #print("not authorized user")
-    return lockerNum, status
+            print("Access denied")
+    elif(locker == '2'):
+        if(locker2_access == True):
+            publish.single("unlockNUM", locker, hostname="192.168.1.41")
+        else:
+            print("Access denied")
+    else:
+        print("Locker does not exist")
 
-def appendUser(file_name, list_of_elem):
-    with open(file_name, 'a+',newline='') as write_obj:
-        csv_writer=writer(write_obj)
-        csv_writer.writerow(list_of_elem)
+def login():
+
+    global ID
+    global locker1_access
+    global locker2_access
+
+    conn = sqlite3.connect('user.db')
+    c = conn.cursor()
+
+    ID = input("Enter ID")
+
+    c.execute("SELECT * FROM users WHERE user_ID = (?)", (ID,))
+    items = c.fetchone()
+    locker1_access = bool(items[2])
+    locker2_access = bool(items[3])
+    # print(items)
+    print(locker1_access)
+    print(locker2_access)
+
+    conn.commit()
+    conn.close()
+
+    unlockDoor()
         
 def newUser():
-    user_info = [input("Swipe your coyote ID."), input("Which locker would you like to be assigned to?")]
+    conn = sqlite3.connect('user.db')
+    c = conn.cursor()
+    user_info = [
+                    input("Swipe your coyote ID."), 
+                    input("Password"),
+                    input("Access to Locker1?"),
+                    input("Access to Locker2?")
+                ]
     
-    appendUser('users2.csv', user_info)
+    c.execute("INSERT OR REPLACE INTO users VALUES(?,?,?,?)", user_info)
+    conn.commit()
+    conn.close()
     
-def openLocker():
-    locker, bool = authentication()
-    unlockDoor(locker, bool)
+# def openLocker():
+#     locker, bool = authentication()
+#     unlockDoor(locker, bool)
 
 
 def main():
+
+    conn = sqlite3.connect('user.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM users")
+    items = c.fetchall()
+    for item in items:
+        print(item[0] + " " + item[1]+ " " + str(item[2]) + " " + str(item[3]))
     
     print("-------------------------------------------")
     print("To close the program, press CTRL+C")
@@ -87,7 +91,7 @@ def main():
         selection = input()
         
         if selection == '1':
-            openLocker()
+            login()
         elif selection == '2':
             newUser()
         elif selection == '3':
