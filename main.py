@@ -9,6 +9,8 @@ import time
 import sys
 import paho.mqtt.publish as publish
 import sqlite3
+from tkinter import *
+from PIL import ImageTk, Image
 
 
 def unlockDoor():
@@ -41,11 +43,12 @@ def login():
 
     c.execute("SELECT * FROM users WHERE user_ID = (?)", (ID,))
     items = c.fetchone()
-    locker1_access = bool(items[2])
-    locker2_access = bool(items[3])
-    # print(items)
-    print(locker1_access)
-    print(locker2_access)
+    if items is None:
+        print("There is no ID %s"%ID)
+        return
+    else:
+        locker1_access = bool(items[2])
+        locker2_access = bool(items[3])
 
     conn.commit()
     conn.close()
